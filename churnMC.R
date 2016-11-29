@@ -1,25 +1,39 @@
-visualization <- function()
+visualizechurn <- function()
 {
+    ptm <- proc.time() #start the timer
+    
     library(ggplot2)
+    library(png)
+    library(scales)
     
     # Monte Carlo Simulation of remaining lifetime value of
     # the entire book of customer as represented by the file
     # currentcustomers.  100 simulations on 100 customers
     path="~/ChurnDemo/"
     filename="currentcustomers.csv"
-    bookdf <- booksimulation(numexperiments=100, seed=42, paste0(path,filename))
-    margindistribution <- aggregate(x=list(totalmargin=bookdf$totalmargin),by=list(experiment=bookdf$experiment),FUN=sum)
-    ggplot(data=margindistribution, aes(margindistribution$totalmargin/1000)) + 
-        geom_histogram(col="red", 
-                       fill="green", 
+    bookdf <- booksimulation(numexperiments=1000, seed=42, paste0(path,filename))
+    konopng <- png::readPNG(paste0(path,"Kono-Logo-Black.320x121.png"))
+    bookdf <- aggregate(x=list(totalmargin=bookdf$totalmargin),by=list(experiment=bookdf$experiment),FUN=sum)
+
+    konopng <- png::readPNG(paste0(path,"Kono-Logo-Black.320x121.png"))
+
+    h1 <- ggplot(data=bookdf, aes(bookdf$totalmargin/1000))
+    h1 <- h1 + geom_histogram(col="purple", 
+                       fill="gold", 
                        alpha = .2,
-                       bins=10) + 
-        labs(title="Portfolio Lifetime Value Histogram") +
-        labs(x="Lifetime Value (in thousands of dollars)", y="Number of Scenarios") +
-        scale_x_continuous(labels = scales::dollar)
-    ggsave(paste0(path,"PortfolioLV.hist.png"))
-    margindistribution
-    
+                       binwidth = 20)
+    h1 <- h1 + labs(title="Portfolio Lifetime Value Histogram")
+    h1 <- h1 + labs(x="Lifetime Value (in thousands of dollars)", y="Number of Scenarios in Monte Carlo Simulation")
+    h1 <- h1 + scale_x_continuous(labels = scales::dollar, breaks = seq(0,max(bookdf$totalmargin),10))
+    h1 <- h1 + theme(axis.text.x = element_text(angle = 90))
+    h1 <- h1 + annotation_raster(konopng, ymin= 275, ymax = 350, xmin = 200, xmax = 250)
+    h1 <- h1 + annotate("text", x=225, y=250, label = paste0("median = ",scales::dollar_format(largest_with_cents = 1)(median(bookdf$totalmargin))))
+    h1 <- h1 + annotate("text", x=225, y=235, label = paste0("mean = ",scales::dollar_format(largest_with_cents = 1)(mean(bookdf$totalmargin))))
+    h1 <- h1 + annotate("text", x=225, y=220, label = paste0("max = ",scales::dollar_format(largest_with_cents = 1)(max(bookdf$totalmargin))))
+    h1 <- h1 + annotate("text", x=225, y=205, label = paste0("min = ",scales::dollar_format(largest_with_cents = 1)(min(bookdf$totalmargin))))
+    h1 <- h1 + annotate("text", x=225, y=190, label = paste0("sd = ",scales::dollar_format(largest_with_cents = 1)(sd(bookdf$totalmargin))))
+    ggsave(filename=paste0(path,"PortfolioLV.hist.png"), plot=h1, width=5, height=5, units = "in")
+
     #Monte Carlo Simulation of remaining lifetime value of 
     #a customer on month 20 of a 24 month contract with a 
     #$10 margin.  1000 simulations on one customer
@@ -30,15 +44,25 @@ visualization <- function()
                                      oncontract=TRUE,
                                      contractmonthsleft = 4,
                                      offcontractmonths = 0)
-    ggplot(data=customerdf, aes(customerdf$totalmargin)) + 
-        geom_histogram(col="red", 
-                       fill="green", 
+    h2 <- ggplot(data=customerdf[customerdf$totalmargin<750,], aes(customerdf$totalmargin[customerdf$totalmargin<750]))
+    h2 <- h2 + geom_histogram(col="purple", 
+                       fill="gold", 
                        alpha = .2,
-                       binwidth=25) +
-        xlim(c(0,500)) + 
-        labs(title="One Customer Lifetime Value Histogram") +
-        labs(x="Lifetime Value (in dollars)", y="Number of Scenarios")
-    ggsave(paste0(path,"CustomerLV.hist.png"))
+                       binwidth=50)
+    h2 <- h2 + labs(title="One Customer Lifetime Value Histogram")
+    h2 <- h2 + labs(x="Lifetime Value (in dollars)", y="Number of Scenarios in Monte Carlo Simulation")
+    h2 <- h2 + scale_x_continuous(labels = scales::dollar)
+    h2 <- h2 + theme(axis.text.x = element_text(angle = 90))
+    h2 <- h2 + annotation_raster(konopng, ymin = 110, ymax = 125, xmin = 500, xmax = 650)
+    h2 <- h2 + annotate("text", x=575, y=100, label = paste0("median = ",scales::dollar_format(largest_with_cents = 1)(median(customerdf$totalmargin))))
+    h2 <- h2 + annotate("text", x=575, y=95, label = paste0("mean = ",scales::dollar_format(largest_with_cents = 1)(mean(customerdf$totalmargin))))
+    h2 <- h2 + annotate("text", x=575, y=90, label = paste0("max = ",scales::dollar_format(largest_with_cents = 1)(max(customerdf$totalmargin))))
+    h2 <- h2 + annotate("text", x=575, y=85, label = paste0("min = ",scales::dollar_format(largest_with_cents = 1)(min(customerdf$totalmargin))))
+    h2 <- h2 + annotate("text", x=575, y=80, label = paste0("sd = ",scales::dollar_format(largest_with_cents = 1)(sd(customerdf$totalmargin))))
+    ggsave(filename=paste0(path,"CustomerLV.hist.png"), plot=h2, width=5, height=5, units = "in")
+    
+    print("Execution Time:")
+    print(proc.time()-ptm)
 }
 
 booksimulation <- function(numexperiments, seed=NA, fileandpath="~/ChurnDemo/currentcustomers.csv")
